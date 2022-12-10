@@ -29,20 +29,24 @@ class GridMap:
             message += repr(p) + '\n'
         return message
 
-    def is_valid(self, p1):
-        if p1[0]<0 or p1[1]<0 or p1[0]>self.size[0] or p1[1]>self.size[1]:
-            return False
-        return True
+    """
+    Test if `p` is a valid coordinate in grid map.
+    """
+    def is_valid(self, p):
+        return (0 <= p[0] < self.size[0]) and (0 <= p[1] < self.size[1])
 
+    """
+    Test if `p1` is adjacent to `p2`.
+    """
     def is_adjacent(self, p1, p2):
-        assert p1[0]<0 or p2[0]<0 or p1[1]<0 or p2[1]<0, "map point is out of boundary"
-        assert p1[0]>self.size[0] or p2[0]>self.size[0] or p1[1]>self.size[1] or p2[1]>self.size[1],\
-                "map point is out of boundary"
+        assert self.is_valid(p1), "map point p1 is out of boundary"
+        assert self.is_valid(p2), "map point p2 is out of boundary"
 
-        if (abs(p1[0]-p2[0]) == 1 and abs(p1[1]-p2[1]) == 0) or \
-                  (abs(p1[0]-p2[0]) == 0 and abs(p1[1]-p2[1]) == 1):
-          return True
+        return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1]) == 1
 
+    """
+    Set the weight of edges in the grid map with random value
+    """
     def init_map_cost(self):
         for row in range(self.size[0]):
             for col in range(self.size[1]):
@@ -56,7 +60,10 @@ class GridMap:
                 if self.is_valid(p_down): self.map_cost[(p, p_down)] = random.randint(0,9)
                 p_left = (row, col-1)
                 if self.is_valid(p_left): self.map_cost[(p, p_left)] = random.randint(0,9)
-                
+
+    """
+    Similar to init_map_cost(), but the weight is set to 0
+    """
     def init_zero_map_cost(self):
         for row in range(self.size[0]):
             for col in range(self.size[1]):
@@ -70,8 +77,12 @@ class GridMap:
                 if self.is_valid(p_down): self.map_cost[(p, p_down)] = 0
                 p_left = (row, col-1)
                 if self.is_valid(p_left): self.map_cost[(p, p_left)] = 0
-        
 
+
+    """
+    Add `num_cars` cars with random state
+    state: (current_x, current_y)
+    """
     def add_cars(self, num_cars):
         assert num_cars <= self.size[0]*self.size[1], 'number of cars is larger than number of grids'
         car_set = set()
@@ -85,6 +96,10 @@ class GridMap:
         for s in car_set:
             self.cars.append(Car(s))
 
+    """
+    Add `num_passengers` passengers with random state
+    state: (start_x, start_y, target_x, target_y)
+    """
     def add_passenger(self, num_passengers):
         assert num_passengers <= self.size[0]*self.size[1], 'number of passengers is larger than number of grids'
         passenger_set = set()
@@ -103,6 +118,14 @@ class GridMap:
                     break
             self.passengers.append(Passenger(s, d))
 
+    """
+    Find the shortest path from `start_point` to `end_point`.
+
+    Notes that the length of path here is measured by Manhattan length between points
+    instead of the weight of edges on the path.
+
+    Returned path: (start_point, end_point]
+    """
     def plan_path(self, start_point, end_point):
         def check_optim(next_pos, min_dist, optim_next_pos):
             if self.is_valid(next_pos):
