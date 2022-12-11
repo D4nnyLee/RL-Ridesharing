@@ -79,7 +79,7 @@ class Agent:
         #self.optimizer = optim.Adam(self.params, lr=self.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
         #self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1500, gamma=0.1)
 
-        
+
 
     def select_action(self,state):
         #Select action with epsilon greedy
@@ -170,11 +170,11 @@ class Agent:
                 if self.mode == "qmix":
                     torch.save(self.mixer.state_dict(), "mixer_episode_" + str(episode) + "_" +self.load_file)
                 print("Checkpoint saved")
-                
-                    
+
+
             print("Episode: ", episode)
 
-           
+
         if self.training:
             torch.save(self.policy_net.state_dict(), self.load_file )
             if self.mode == "qmix":
@@ -183,13 +183,13 @@ class Agent:
             
         print("Average duration was ", duration_sum/self.num_episodes)
         print("Finished")  
-            
+
     def reset(self):
         self.env.reset()
         self.grid_map = self.env.grid_map
         self.cars = self.env.grid_map.cars
         self.passengers = self.env.grid_map.passengers
-        
+
     def reset_orig_env(self):
 
         self.env = copy.deepcopy(self.orig_env)
@@ -202,16 +202,18 @@ class Agent:
     def optimize_model(self):
         if len(self.memory) < self.batch_size:
             return
-        
+
         transitions = self.memory.sample(self.batch_size)
         batch = Transition(*zip(*transitions))
-    
-        state_batch = torch.cat(batch.state)
+
+        state_batch = torch.cat(batch.state) # Concat the state of each batch into a 1D array
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
-        
+
+        # Turn on training mode
         self.policy_net.train()
         
+        # Get the Q-values from the Q-table
         state_action_values = self.policy_net(state_batch).view(self.batch_size, self.num_passengers, self.num_cars).gather(2,action_batch.unsqueeze(2)).squeeze()
 
         # Compute the expected Q values
@@ -233,7 +235,7 @@ class Agent:
         # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()
-        
+
         for param in self.policy_net.parameters():
             param.grad.data.clamp_(-1, 1)
         self.optimizer.step()

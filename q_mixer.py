@@ -32,7 +32,7 @@ class QMixer(nn.Module):
                                nn.Linear(mix_hidden, 1))
 
     def forward(self, agent_qs, states):
-        
+
         bs = agent_qs.size(0)
         states = states.reshape(-1, self.state_size)
         agent_qs = agent_qs.view(-1, 1, self.num_passengers)
@@ -42,19 +42,19 @@ class QMixer(nn.Module):
         b1 = self.hyper_b_1(states)
         w1 = w1.view(-1, self.num_passengers, self.mix_hidden)
         b1 = b1.view(-1, 1, self.mix_hidden)
-        
+
         hidden = F.elu(th.bmm(agent_qs, w1) + b1)
 
         # Second layer
         w_final = th.abs(self.hyper_w_final(states))
         w_final = w_final.view(-1, self.mix_hidden, 1)
-        
+
         # State-dependent bias
         v = self.V(states).view(-1, 1, 1)
-        
+
         # Compute final output
         y = th.bmm(hidden, w_final) + v
-        
+
         # Reshape and return
         q_tot = y.view(bs, -1, 1)
         

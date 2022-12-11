@@ -2,9 +2,10 @@
 from passenger import Passenger
 
 class Car:
-    def __init__(self, position):
+    def __init__(self, position, energy):
         self.status = 'idle' # idle, picking_up, dropping_off
         self.position = position
+        self.energy = energy
         self.passenger = None
         self.path = []
         self.required_steps = None
@@ -38,6 +39,12 @@ class Car:
 
     def move(self): # call by environment step
         assert self.status != 'idle', "shouldn't move"
+
+        if self.energy <= 0:
+            return
+
+        self.energy -= 1
+
         self.position = self.path.pop(0)
         self.travel_distance += 1
 
