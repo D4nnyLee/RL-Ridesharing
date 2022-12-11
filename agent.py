@@ -113,16 +113,16 @@ class Agent:
     
     
     def get_state(self):
-        # Cars (px, py, 1=matched), Passengers(pickup_x, pickup_y, dest_x, dest_y, 1=matched)
-        # Vector Size = 3*C + 5*P 
+        # Cars (px, py, energy), Passengers(pickup_x, pickup_y, dest_x, dest_y)
+        # Vector Size = 3*C + 4*P 
         cars = self.cars
         passengers = self.passengers
 
         # Encode information about cars
-        cars_vec = np.zeros(2*len(cars))
+        cars_vec = np.zeros(3*len(cars))
         
         for i, car in enumerate(cars):    
-            cars_vec[2*i: 2*i + 2]  = [car.position[0], car.position[1]]
+            cars_vec[3*i: 3*i + 3]  = [car.position[0], car.position[1], car.energy]
 
         # Encode information about passengers
         passengers_vec = np.zeros(4*len(passengers))
@@ -304,7 +304,7 @@ if __name__ == '__main__':
     env = Environment(grid_map)
 
 
-    input_size = 2*num_cars + 4*num_passengers # cars (px, py), passengers(pickup_x, pickup_y, dest_x, dest_y)
+    input_size = 3*num_cars + 4*num_passengers # cars (px, py, energy), passengers(pickup_x, pickup_y, dest_x, dest_y)
     output_size = num_cars * num_passengers  # num_cars * (num_passengers + 1)
     hidden_size = 256
     #load_file = "episode_49800_qmix_model_num_cars_10_num_passengers_10_num_episodes_50000_hidden_size_128.pth" # 3218 over 1000 episodes

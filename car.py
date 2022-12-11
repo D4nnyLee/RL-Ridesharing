@@ -37,16 +37,25 @@ class Car:
     def assign_path(self, path1, path2):
         self.path = (path1 + path2)
 
+    """
+    Try to move the car to the next position
+    on the path.
+
+    Return False only if the car is out of energy.
+    """
     def move(self): # call by environment step
-        assert self.status != 'idle', "shouldn't move"
+        assert self.status != 'idle', "shouldn't move", "out_of_energy"
 
         if self.energy <= 0:
-            return
+            self.status = "out_of_energy"
+            return False
 
         self.energy -= 1
 
         self.position = self.path.pop(0)
         self.travel_distance += 1
+
+        return True
 
 if __name__ == '__main__':
     c = Car((0,0))

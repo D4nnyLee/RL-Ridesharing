@@ -52,6 +52,9 @@ class Environment:
                     pick_up_path = grid_map.plan_path(car.position, passenger.pick_up_point)
                     drop_off_path = grid_map.plan_path(passenger.pick_up_point, passenger.drop_off_point)
                     car.assign_path(pick_up_path, drop_off_path)
+                elif cars[act].status == "out_of_energy" and passengers[i].status == "wait_pair":
+                    duration += self.grid_map.fail_penalty
+                    passengers[i].status = "dropped" # TODO: Add another status to handle this condition
 
 
 
@@ -66,7 +69,7 @@ class Environment:
             """
             for i,car in enumerate(cars):
 
-                if car.status == 'idle':
+                if car.status == 'idle' or car.status == 'out_of_energy':
                     continue
 
                 # init require step
@@ -83,8 +86,9 @@ class Environment:
                     if car.required_steps > 0:  # decrease steps
                         car.required_steps -= 1
                     elif car.required_steps == 0: # move
-                        car.move()
-                        if car.path:
+                        if car.move() == False:   # Out of energy
+                            duration += self.grid_map.fail_penalty
+                        elif car.path:
                             car.required_steps = self.grid_map.map_cost[(car.position, car.path[0])]
 
             """

@@ -20,6 +20,10 @@ class GridMap:
         self.add_cars(num_cars)
         self.init_map_cost()
 
+        # Penalty time when car fails to
+        # take a passenger to the destination
+        self.fail_penalty = 100 # TODO: Try a different or dynamic value
+
     def __repr__(self):
         message = 'cls:' + type(self).__name__ + \
                 ', size:' + str(self.size) + ', seed:' + str(self.seed )+ '\n'
@@ -94,7 +98,7 @@ class GridMap:
                 car_set.add(p)
 
         for s in car_set:
-            self.cars.append(Car(s))
+            self.cars.append(Car(s, random.randint(0, self.size[0] + self.size[1] - 2)))
 
     """
     Add `num_passengers` passengers with random state
