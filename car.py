@@ -13,7 +13,8 @@ class Car:
 
     def __repr__(self):
         message = 'cls:' + type(self).__name__ + ', id:' + str(id(self))  + ', status: ' + self.status + \
-          ', required_steps:' + str(self.required_steps) + ', position:' + str(self.position) + ', path:' + str(self.path)
+          ', required_steps:' + str(self.required_steps) + ', position:' + str(self.position) + ', path:' + str(self.path) + \
+          ', energy:' + str(self.energy)
         if self.passenger:
             message += ', passenger: ' + str(id(self.passenger))
         else:
