@@ -44,7 +44,7 @@ class Car:
     Return False only if the car is out of energy.
     """
     def move(self): # call by environment step
-        assert self.status != 'idle', "shouldn't move", "out_of_energy"
+        assert self.status != 'idle' and self.status != 'out_of_energy', "shouldn't move"
 
         if self.energy <= 0:
             self.status = "out_of_energy"
@@ -58,7 +58,7 @@ class Car:
         return True
 
 if __name__ == '__main__':
-    c = Car((0,0))
+    c = Car((0,0), 10)
     print(c)
     p = Passenger((0,0), (1,0))
     print(p)
