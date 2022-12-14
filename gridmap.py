@@ -10,7 +10,7 @@ class GridMap:
     def __init__(self, seed, size, num_cars, num_passengers):
         random.seed(seed)
         self.seed = seed
-        self.size = size #(row, col)
+        self.size = size # (row, col)
         self.num_cars = num_cars
         self.num_passengers = num_passengers
         self.map_cost = {}
@@ -55,15 +55,15 @@ class GridMap:
         for row in range(self.size[0]):
             for col in range(self.size[1]):
                 p = (row, col)
-                # for up
-                p_up = (row-1, col)
-                if self.is_valid(p_up): self.map_cost[(p, p_up)] = random.randint(0,9)
-                p_right = (row, col+1)
-                if self.is_valid(p_right): self.map_cost[(p, p_right)] = random.randint(0,9)
-                p_down = (row+1, col)
-                if self.is_valid(p_down): self.map_cost[(p, p_down)] = random.randint(0,9)
-                p_left = (row, col-1)
-                if self.is_valid(p_left): self.map_cost[(p, p_left)] = random.randint(0,9)
+
+                p_up = (row + 1, col)
+                if self.is_valid(p_up):
+                    self.map_cost[(p_up, p)] = self.map_cost[(p, p_up)] = random.randint(0, 9)
+
+                p_right = (row, col + 1)
+                if self.is_valid(p_right):
+                    self.map_cost[(p_right, p)] = self.map_cost[(p, p_right)] = random.randint(0, 9)
+
 
     """
     Similar to init_map_cost(), but the weight is set to 0
@@ -72,15 +72,15 @@ class GridMap:
         for row in range(self.size[0]):
             for col in range(self.size[1]):
                 p = (row, col)
-                # for up
-                p_up = (row-1, col)
+
+                p_up = (row + 1, col) 
                 if self.is_valid(p_up): self.map_cost[(p, p_up)] = 0
-                p_right = (row, col+1)
+                p_right = (row, col + 1)
                 if self.is_valid(p_right): self.map_cost[(p, p_right)] = 0
-                p_down = (row+1, col)
+                p_down = (row - 1, col) 
                 if self.is_valid(p_down): self.map_cost[(p, p_down)] = 0
-                p_left = (row, col-1)
-                if self.is_valid(p_left): self.map_cost[(p, p_left)] = 0
+                p_left = (row, col - 1)
+                if self.is_valid(p_left): self.map_cost[(p, p_left)] = 0 
 
 
     """
@@ -144,9 +144,9 @@ class GridMap:
             min_dist = math.inf
             optim_next_pos = None
             # up
-            min_dist, optim_next_pos = check_optim((curr_pos[0]-1, curr_pos[1]), min_dist, optim_next_pos)
-            # down
             min_dist, optim_next_pos = check_optim((curr_pos[0]+1, curr_pos[1]), min_dist, optim_next_pos)
+            # down
+            min_dist, optim_next_pos = check_optim((curr_pos[0]-1, curr_pos[1]), min_dist, optim_next_pos)
             # left
             min_dist, optim_next_pos = check_optim((curr_pos[0], curr_pos[1]-1), min_dist, optim_next_pos)
             # right
@@ -178,9 +178,9 @@ class GridMap:
 
 
 if __name__ == '__main__':
-    m = GridMap(0, (10,10), 3, 3)
-    print(m)
+    g = GridMap(0, (10,10), 3, 3)
+    print(g)
     print('path from (0,0) to (5,5):')
-    path = m.plan_path((0,0),(5,5))
+    path = g.plan_path((0,0),(5,5))
     print(path)
-    m.visualize()
+    g.visualize()
