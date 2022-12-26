@@ -18,10 +18,10 @@ import copy
 
 
 Transition = namedtuple('Transition',
-                        ('state', 'action', 'reward'))
+                        ('state', 'action', 'reward', 'next_state'))
 
 class Agent:
-    def __init__(self, env, input_size, output_size, hidden_size, mix_hidden = 32, batch_size = 128, lr = 0.001, gamma = .999, eps_start = 0.9, 
+    def __init__(self, env, input_size, output_size, hidden_size, mix_hidden = 32, batch_size = 128, lr = 0.001, alpha = .999, gamma = .999, eps_start = 0.9,
                  eps_end = 0.05, eps_decay = 750,  replay_capacity = 10000, num_save = 200, num_episodes = 10000, mode="random", training = False, load_file = None):
         self.env = env
         self.orig_env = copy.deepcopy(env)
@@ -34,6 +34,7 @@ class Agent:
         self.output_size = output_size
         self.hidden_size = hidden_size
         self.batch_size = batch_size
+        self.alpha = alpha
         self.gamma = gamma
         self.eps_start = eps_start
         self.eps_end = eps_end
@@ -131,15 +132,16 @@ class Agent:
                                              passenger.drop_off_point[0],passenger.drop_off_point[1]]
 
         return torch.tensor(np.concatenate((cars_vec, passengers_vec)), device= self.device, dtype=torch.float).unsqueeze(0)
-    
-    
+
+
     def train(self):
-        
+
         duration_sum = 0.0
-        
+
+        self.reset()
+
         for episode in range(self.num_episodes):
             
-            self.reset() 
             #self.reset_orig_env()
             
             state = self.get_state()  
@@ -153,12 +155,16 @@ class Agent:
             
             
             reward, duration = self.env.step(action, self.mode)
+
+            self.reset()
+
+            next_state = self.get_state()
             
             self.episode_durations.append(duration)
             duration_sum += duration
             
             if self.training:
-                self.memory.push(state, action, torch.tensor(reward, device = self.device, dtype=torch.float).unsqueeze(0))  
+                self.memory.push(state, action, torch.tensor(reward, device = self.device, dtype=torch.float).unsqueeze(0), next_state)
                 self.optimize_model()
                 
                 self.plot_durations(self.mode)
@@ -209,24 +215,34 @@ class Agent:
         state_batch = torch.cat(batch.state) # Concat the state of each batch into a 1D array
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
+        next_state_batch = torch.cat(batch.next_state)
 
         # Turn on training mode
         self.policy_net.train()
         
         # Get the Q-values from the Q-table
-        state_action_values = self.policy_net(state_batch).view(self.batch_size, self.num_passengers, self.num_cars).gather(2,action_batch.unsqueeze(2)).squeeze()
+        state_action_values = self.policy_net(state_batch).view(self.batch_size, self.num_passengers, self.num_cars).gather(2, action_batch.unsqueeze(2)).squeeze()
 
         # Compute the expected Q values
-        expected_state_action_values = reward_batch
-        
+        with torch.no_grad():
+            next_state_values = self.policy_net(next_state_batch).view(self.batch_size, self.num_passengers, self.num_cars).max(2)[0]
 
         # Compute Huber loss
         if self.mode == "dqn":
+            expected_state_action_values = state_action_values + self.alpha * (reward_batch + self.gamma * next_state_values - state_action_values)
+
             loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)
         elif self.mode == "qmix":
             self.mixer.train()
             chosen_action_qvals = self.mixer(state_action_values, state_batch)
-            loss = F.smooth_l1_loss(chosen_action_qvals, reward_batch.view(-1, 1, 1))
+
+            with torch.no_grad():
+                next_chosen_action_qvals = self.mixer(next_state_values, next_state_batch)
+
+            expected_chosen_action_qvals = chosen_action_qvals + self.alpha * \
+                        (reward_batch.view(-1, 1, 1) + self.gamma * next_chosen_action_qvals - chosen_action_qvals)
+
+            loss = F.smooth_l1_loss(chosen_action_qvals, expected_chosen_action_qvals)
             #loss = F.mse_loss(chosen_action_qvals, reward_batch.view(-1, 1, 1))
 
 
@@ -266,7 +282,7 @@ class Agent:
         plt.plot(total_steps_smoothed)
         np.save("Duration_"+filename, total_steps_smoothed)
         plt.savefig("Durations_history_" + filename)
-        
+
     def plot_loss_history(self, filename):
         print("Saving loss history ...")
         plt.figure(2)
@@ -297,7 +313,7 @@ class Agent:
 if __name__ == '__main__':
     num_cars = 20
     num_passengers = 40
-    
+
     grid_map = GridMap(1, (100,100), num_cars, num_passengers)
     cars = grid_map.cars
     passengers = grid_map.passengers
@@ -313,7 +329,7 @@ if __name__ == '__main__':
     # random 3386, 337.336, 17092
     load_file = None
     #greedy, random, dqn, qmix
-    agent = Agent(env, input_size, output_size, hidden_size, load_file = load_file, lr=0.001, mix_hidden = 64, batch_size=128, eps_decay = 50, num_episodes=1000, mode = "dqn", training = True) # 50,000 episodes for full trains
+    agent = Agent(env, input_size, output_size, hidden_size, load_file = load_file, lr=0.001, alpha = 0.5, gamma = 0.3, mix_hidden = 64, batch_size=128, eps_decay = 200, num_episodes=1000, mode = "dqn", training = True) # 50,000 episodes for full trains
     agent.train()
 
-    
+

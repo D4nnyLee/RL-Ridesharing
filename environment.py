@@ -8,10 +8,8 @@ class Environment:
     Reset the cars and passengers on the grid map
     """
     def reset(self):
-        self.grid_map.cars = []
         self.grid_map.passengers = []
         self.grid_map.add_passengers(self.grid_map.num_passengers)
-        self.grid_map.add_cars(self.grid_map.num_cars) 
 
     def step(self, action, mode):
         action = action[0]
@@ -83,6 +81,8 @@ class Environment:
 
         if mode == "dqn":
             reward = [-passenger.waiting_steps for passenger in passengers]
+        elif mode == "qmix":
+            reward = -duration
 
         return reward, duration
 

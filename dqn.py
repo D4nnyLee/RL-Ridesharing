@@ -8,7 +8,7 @@ import math
 from collections import namedtuple
 
 Transition = namedtuple('Transition',
-                        ('state', 'action', 'reward'))
+                        ('state', 'action', 'reward', 'next_state'))
 
 class ReplayMemory:
 
