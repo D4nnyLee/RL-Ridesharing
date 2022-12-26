@@ -84,21 +84,21 @@ class Agent:
     def select_action(self,state):
         #Select action with epsilon greedy
         sample = random.random()
-        
+
         eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * \
             math.exp(-1. * self.steps_done / self.eps_decay)
-            
+
         print(eps_threshold)
 
         self.steps_done += 1
-        
+
         if not self.training:
             eps_threshold = 0.0
 
         if sample > eps_threshold:
             # Choose best action
             with torch.no_grad():
-                
+
                 self.policy_net.eval() 
                 return self.policy_net(state).view(self.num_passengers, self.num_cars).max(1)[1].view(1,self.num_passengers)
 
@@ -113,16 +113,16 @@ class Agent:
     
     
     def get_state(self):
-        # Cars (px, py, energy), Passengers(pickup_x, pickup_y, dest_x, dest_y)
-        # Vector Size = 3*C + 4*P 
+        # Cars (px, py), Passengers(pickup_x, pickup_y, dest_x, dest_y)
+        # Vector Size = 2*C + 4*P 
         cars = self.cars
         passengers = self.passengers
 
         # Encode information about cars
-        cars_vec = np.zeros(3*len(cars))
+        cars_vec = np.zeros(2*len(cars))
         
         for i, car in enumerate(cars):    
-            cars_vec[3*i: 3*i + 3]  = [car.position[0], car.position[1], car.energy]
+            cars_vec[2*i: 2*i + 2]  = [car.position[0], car.position[1]]
 
         # Encode information about passengers
         passengers_vec = np.zeros(4*len(passengers))
@@ -295,8 +295,8 @@ class Agent:
         plt.savefig("Loss_history_" + filename)
 
 if __name__ == '__main__':
-    num_cars =20
-    num_passengers = 25
+    num_cars = 20
+    num_passengers = 40
     
     grid_map = GridMap(1, (100,100), num_cars, num_passengers)
     cars = grid_map.cars
@@ -304,7 +304,7 @@ if __name__ == '__main__':
     env = Environment(grid_map)
 
 
-    input_size = 3*num_cars + 4*num_passengers # cars (px, py, energy), passengers(pickup_x, pickup_y, dest_x, dest_y)
+    input_size = 2*num_cars + 4*num_passengers # cars (px, py), passengers(pickup_x, pickup_y, dest_x, dest_y)
     output_size = num_cars * num_passengers  # num_cars * (num_passengers + 1)
     hidden_size = 256
     #load_file = "episode_49800_qmix_model_num_cars_10_num_passengers_10_num_episodes_50000_hidden_size_128.pth" # 3218 over 1000 episodes
@@ -313,7 +313,7 @@ if __name__ == '__main__':
     # random 3386, 337.336, 17092
     load_file = None
     #greedy, random, dqn, qmix
-    agent = Agent(env, input_size, output_size, hidden_size, load_file = load_file, lr=0.001, mix_hidden = 64, batch_size=128, eps_decay = 20000, num_episodes=1000, mode = "dqn", training = False) # 50,000 episodes for full trains
+    agent = Agent(env, input_size, output_size, hidden_size, load_file = load_file, lr=0.001, mix_hidden = 64, batch_size=128, eps_decay = 50, num_episodes=1000, mode = "dqn", training = True) # 50,000 episodes for full trains
     agent.train()
 
     

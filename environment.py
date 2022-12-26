@@ -1,30 +1,39 @@
-#from algorithm import PairAlgorithm
+from priority_queue import PriorityQueue
 
 class Environment:
-
     def __init__(self, grid_map):
         self.grid_map = grid_map
-        #self.algorithm = PairAlgorithm()
-
 
     """
     Reset the cars and passengers on the grid map
     """
     def reset(self):
-
         self.grid_map.cars = []
         self.grid_map.passengers = []
-        self.grid_map.add_passenger(self.grid_map.num_passengers)
+        self.grid_map.add_passengers(self.grid_map.num_passengers)
         self.grid_map.add_cars(self.grid_map.num_cars) 
 
-
     def step(self, action, mode):
+        action = action[0]
 
         grid_map = self.grid_map
         cars = grid_map.cars
         passengers = grid_map.passengers
-        reward = [0]*len(passengers)
-        done = False
+
+        reward = None
+
+        for i, act in enumerate(action):
+            cars[act].assign_passenger(passengers[i])
+
+        """
+        `pq` will only store the serving car.
+
+        Element of this priority queue should be
+        (Time to arrive next position, car),
+        and here we only compare the time when handling
+        priority queue.
+        """
+        pq = PriorityQueue(lambda lhs, rhs: lhs[0] < rhs[0])
 
         """
         `duration` will be the total required time units
@@ -32,85 +41,77 @@ class Environment:
         """
         duration = 0
 
-        while not done:
+        for car in cars:
+            car.pair_passengers()
+            if car.status == "picking_up":
+                """
+                `cost` equals to 0 if and only if
+                the car and first passenger is at
+                the same position.
+                """
+                cost = 0
+                if len(car.path) > 0:
+                    cost += grid_map.map_cost[(car.position, car.path[0])]
 
-            # print("Action: ", action)
-            # print(self.grid_map)
-            # input("Press enter to step")
-            # self.grid_map.visualize()
+                pq.push((duration + cost, car))
 
+        while len(pq) > 0:
+            duration = pq.top()[0]
 
-            """
-            Let car `act` to take passenger `i` with FCFS policy.
-            Earlier passenger has lower `i`.
-            """
-            for i, act in enumerate(action[0]):
-                if cars[act].status == "idle" and passengers[i].status == "wait_pair":
-                    car = cars[act]
-                    passenger = passengers[i]
-                    car.pair_passenger(passenger)
-                    pick_up_path = grid_map.plan_path(car.position, passenger.pick_up_point)
-                    drop_off_path = grid_map.plan_path(passenger.pick_up_point, passenger.drop_off_point)
-                    car.assign_path(pick_up_path, drop_off_path)
-                elif cars[act].status == "out_of_energy" and passengers[i].status == "wait_pair":
-                    duration += self.grid_map.fail_penalty
-                    passengers[i].status = "dropped" # TODO: Add another status to handle this condition
+            while len(pq) > 0:
+                d, car = pq.top()
 
+                if d != duration:
+                    break
 
+                pq.pop()
 
-            """
-            Move each car in this step.
+                car.move_to_next_position(duration)
+                if len(car.path) == 0:
+                    if car.status == "picking_up":
+                        car.plan_drop_off_path()
+                    elif car.status == "dropping_off":
+                        car.pair_passengers()
 
-            Possible movement:
-            1. Move to adjacent position
-            2. Stay at the same position
-            3. Pick up passenger
-            4. Drop off passenger
-            """
-            for i,car in enumerate(cars):
+                        if car.status == "idle": # No pending passenger, thus no need to push to `pq`
+                            continue
 
-                if car.status == 'idle' or car.status == 'out_of_energy':
-                    continue
-
-                # init require step
-                if car.required_steps is None:  # init
-                    car.required_steps = self.grid_map.map_cost[(car.position, car.path[0])]
-
-                # pick up or drop off will take one step
-                if car.status == 'picking_up' and car.position == car.passenger.pick_up_point: # picking up
-                    car.pick_passenger()
-                elif car.status == 'dropping_off' and car.position == car.passenger.drop_off_point:  # dropping off
-                    car.drop_passenger()
-                else:
-                    # try to move
-                    if car.required_steps > 0:  # decrease steps
-                        car.required_steps -= 1
-                    elif car.required_steps == 0: # move
-                        if car.move() == False:   # Out of energy
-                            duration += self.grid_map.fail_penalty
-                        elif car.path:
-                            car.required_steps = self.grid_map.map_cost[(car.position, car.path[0])]
-
-            """
-            If a passenger does not picked up yet, increasing his/her waiting time.
-            """
-            for passenger in passengers:
-                if passenger.status == 'wait_pair' or passenger.status == 'wait_pick':
-                    passenger.waiting_steps += 1
-
-            done = False not in [passenger.status == "dropped" for passenger in passengers] 
-
-            duration += 1
+                cost = 0
+                if len(car.path) > 0:
+                    cost += grid_map.map_cost[(car.position, car.path[0])]
+                pq.push((duration + cost, car))
 
         if mode == "dqn":
             reward = [-passenger.waiting_steps for passenger in passengers]
 
-        if mode == "qmix" or mode == "iql":
-            #reward = sum(reward)/1000 #len(passengers)
-            reward = -duration
-
-
-
-
         return reward, duration
 
+if __name__ == "__main__":
+    from gridmap import GridMap
+    import random
+
+    size = (100, 100)
+    num_cars = 4
+    num_passengers = 6
+
+    g = GridMap(10, size, num_cars, num_passengers)
+    g.init_one_map_cost()
+
+    e = Environment(g)
+
+    action = [[random.randint(0, num_cars - 1) for _ in range(num_passengers)]]
+
+    for c in g.cars:
+        print(c)
+    print()
+
+    for p in g.passengers:
+        print(p)
+    print()
+
+    print(action[0])
+
+    r, d = e.step(action, "dqn")
+
+    print(f"reward: {r}")
+    print(f"duration: {d}")
